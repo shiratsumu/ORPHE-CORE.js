@@ -5,7 +5,7 @@
  */
 
 const GAIT_TYPE = { 0: 'stop', 1: 'walk', 2: 'run' };
-const GAIT_DIRECTION = { 0: 'left', 2: 'forward', 4: 'backward', 6: 'right' };
+const GAIT_DIRECTION = { 0: 'none', 1: 'forward', 2: 'backward', 3: 'inside', 4: 'outside' };
 const CHART_LEN = 240;
 const CHART_COLORS = { x: '#e5484d', y: '#30a46c', z: '#3e63dd' };
 
@@ -13,6 +13,7 @@ function createCoreState(id) {
   return {
     id,
     side: id === 0 ? 'L' : 'R',
+    deviceLr: null,       // 最後に装着側へ反映した device_information.lr
     connected: false,
     name: '',
     acc: null, gyro: null, euler: null, quat: null,
@@ -93,6 +94,18 @@ function updateSwapTip() {
 function swapSides() {
   for (const s of window.orpheState) s.side = s.side === 'L' ? 'R' : 'L';
   for (const p of panels) p.sideSel.value = p.state.side;
+  updateSwapTip();
+}
+
+// CORE 本体の LR 設定（device_information.lr の bit0: 0 = 左足, 1 = 右足）に装着側を合わせる。
+// 接続ごとに 1 回反映し、CoreToolkit の設定モーダルで LR を変えたときも追従する
+function syncSideWithDevice(state, ble) {
+  const lr = ble.device_information && ble.device_information.lr;
+  if (typeof lr !== 'number' || lr > 3 || lr === state.deviceLr) return;
+  state.deviceLr = lr;
+  state.side = (lr & 1) ? 'R' : 'L';
+  const panel = panels.find((p) => p.state === state);
+  if (panel) panel.sideSel.value = state.side;
   updateSwapTip();
 }
 
@@ -216,12 +229,13 @@ window.addEventListener('load', function () {
 
     ble.onScan = function (deviceName) { state.name = deviceName; };
     ble.onConnect = function () { state.connected = true; };
-    ble.onDisconnect = function () { state.connected = false; state.hz = 0; };
+    ble.onDisconnect = function () { state.connected = false; state.hz = 0; state.deviceLr = null; };
 
     ble.gotConvertedAcc = function (acc) {
       state.acc = { x: acc.x, y: acc.y, z: acc.z };
       state.sampleCount++;
       state.connected = true;
+      syncSideWithDevice(state, this);
       pushHistory(state, acc);
     };
     ble.gotConvertedGyro = function (gyro) { state.gyro = { x: gyro.x, y: gyro.y, z: gyro.z }; };
