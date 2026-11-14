@@ -474,7 +474,7 @@
       },
       "requires_device": true,
       "device_count": 1,
-      "needs_real_device_validation": false,
+      "needs_real_device_validation": true,
       "public_navigation": "listed"
     },
     {
