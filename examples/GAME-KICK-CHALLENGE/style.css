@@ -25,9 +25,6 @@ body.op-body {
 .op-header {
   background: #fff;
   border-bottom: 1px solid var(--op-line);
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
 .op-brand {
