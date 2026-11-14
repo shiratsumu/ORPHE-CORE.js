@@ -101,12 +101,16 @@ function swapSides() {
 }
 
 // CORE 本体の LR 設定（device_information.lr の bit0: 0 = 左足, 1 = 右足）に装着側を合わせる。
-// 接続ごとに 1 回反映し、CoreToolkit の設定モーダルで LR を変えたときも追従する
+// 接続ごとに 1 回反映し、CoreToolkit の設定モーダルで LR を変えたときも追従する。
+// もう 1 台がすでに同じ側なら、あとから反映する方を逆の足にする（2 台とも同じ LR 設定のままでも遊べるように）
 function syncSideWithDevice(state, ble) {
   const lr = ble.device_information && ble.device_information.lr;
   if (typeof lr !== 'number' || lr > 3 || lr === state.deviceLr) return;
   state.deviceLr = lr;
-  state.side = (lr & 1) ? 'R' : 'L';
+  let side = (lr & 1) ? 'R' : 'L';
+  const other = window.orpheState[1 - state.id];
+  if (other.deviceLr !== null && other.side === side) side = side === 'L' ? 'R' : 'L';
+  state.side = side;
   const panel = panels.find((p) => p.state === state);
   if (panel) panel.sideSel.value = state.side;
   updateSwapTip();
