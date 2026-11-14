@@ -461,7 +461,12 @@ function pickTarget(side) {
   // 円がパネルからはみ出さないよう、その奥行きで見えている横幅に収める
   const halfW = (W / 2) / project(view.camX, BALL_R, Z).s;
   const margin = TARGET_R * 1.3;
-  const X = clamp(base.X + rand(-0.35, 0.35), view.camX - halfW + margin, view.camX + halfW - margin);
+  // 反対の足の前に円が出ると、そちらの足で蹴ってしまう。
+  // 反対の足の方へは両足の間隔の 1/4 までしかずらさない（外側へは 0.35 m まで）
+  const other = home[side === 'L' ? 'R' : 'L'];
+  const dir = Math.sign(base.X - other.X) || 1;
+  const inward = Math.min(0.35, Math.abs(base.X - other.X) / 4);
+  const X = clamp(base.X + dir * rand(-inward, 0.35), view.camX - halfW + margin, view.camX + halfW - margin);
   return { X, Y, Z };
 }
 
