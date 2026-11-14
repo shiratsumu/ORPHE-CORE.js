@@ -373,6 +373,32 @@
       "public_navigation": "featured"
     },
     {
+      "id": "game-super-hurdle",
+      "title": "SUPER VIRTUAL HURDLE",
+      "path": "examples/GAME-SUPER-HURDLE/",
+      "type": "web-app",
+      "status": "public",
+      "audience": ["game-player", "educator"],
+      "value": "Stadium edition of the 110m hurdle race: 3D night stadium, two-player VS, ORPHE INSOLE support, post-race analysis and raw-data recording. Heavier than GAME-HURDLE.",
+      "topics": ["game", "virtual sports", "running", "track", "hurdle", "versus", "insole", "analysis"],
+      "data": ["convertedAcc", "euler"],
+      "devices": 2,
+      "validation": ["static-page-check", "thumbnail-exists", "owner-real-device-check"],
+      "category": "virtual-sports",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "examples/_thumbnails/super-hurdle.png",
+      "sort_order": 205,
+      "links": {
+        "demo": "examples/GAME-SUPER-HURDLE/index.html",
+        "source": "examples/GAME-SUPER-HURDLE/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed"
+    },
+    {
       "id": "game-sprint-100m-vs",
       "title": "100m Sprint VS",
       "path": "examples/GAME-SPRINT-100M-VS/",
@@ -458,8 +484,8 @@
       "type": "web-app",
       "status": "public",
       "audience": ["game-player", "creative-coder"],
-      "value": "Playful body-motion game that is easy to understand visually.",
-      "topics": ["game", "creative-coding"],
+      "value": "Step in place to knead, roll and cut udon. Adjustable step sensitivity (gentle or seated stepping still makes progress), 12 bowls decided by how you stepped, and a stepping report with a radar chart (rhythm, tempo, left/right balance, power, stamina, steadiness). Playable with 1 or 2 COREs, with ORPHE INSOLE (the feet on screen press the dough as your soles do), or keyboard-only demo mode.",
+      "topics": ["game", "creative-coding", "step-detection", "exercise-log"],
       "data": ["convertedAcc"],
       "devices": 2,
       "validation": ["existing-public-link", "thumbnail-exists", "needs-device-verification"],
@@ -524,6 +550,32 @@
       "links": {
         "demo": "examples/GAME-PINGPONG/index.html",
         "source": "examples/GAME-PINGPONG/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "featured"
+    },
+    {
+      "id": "game-super-pingpong",
+      "title": "Super Ping Pong",
+      "path": "examples/GAME-SUPER-PINGPONG/",
+      "type": "web-app",
+      "status": "public",
+      "audience": ["game-player", "fitness"],
+      "value": "3D hot-spring ping pong played with ankle flexion or thigh raises: the control adapts to each player during play, six selectable characters, versus / co-op / solo modes and a post-match movement report with a radar chart.",
+      "topics": ["game", "two-player", "fitness", "calibration", "analysis", "3d"],
+      "data": ["quat", "euler"],
+      "devices": 2,
+      "validation": ["thumbnail-exists", "owner-real-device-check"],
+      "category": "playable-app",
+      "difficulty": "advanced",
+      "featured": true,
+      "thumbnail": "examples/_thumbnails/super-pingpong.png",
+      "sort_order": 235,
+      "links": {
+        "demo": "examples/GAME-SUPER-PINGPONG/index.html",
+        "source": "examples/GAME-SUPER-PINGPONG/"
       },
       "requires_device": true,
       "device_count": 2,
@@ -612,7 +664,7 @@
     },
     {
       "id": "game-ddr",
-      "title": "DDR Game",
+      "title": "ORPHE STEP BEAT",
       "path": "examples/GAME-DDR/",
       "type": "web-app",
       "status": "public",

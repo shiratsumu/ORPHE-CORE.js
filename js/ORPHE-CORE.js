@@ -79,6 +79,18 @@ function orpheCoreGyroRawToDps(raw, gyroRangeDps) {
   return raw * gyroRangeDps * ORPHE_CORE_GYRO_DPS_PER_LSB_PER_RANGE;
 }
 
+// Header 50 keeps its existing four-frame layout in bytes 0..91.
+// CORE 3.0 firmware can send it in a 104-byte, zero-initialized BLE buffer.
+// Accept only that known padding variant; other lengths/layouts are not decoded.
+function orpheCoreIsSupportedHeader50Packet(data) {
+  if (data.byteLength === 92) return true;
+  if (data.byteLength !== 104) return false;
+  for (let i = 92; i < 104; i++) {
+    if (data.getUint8(i) !== 0) return false;
+  }
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // センサーレンジ index → 実値
 // DEVICE_INFORMATION の range.acc / range.gyro は 0..3 の index（acc: ±2/4/8/16 G、gyro: ±250/500/1000/2000 dps）。
@@ -280,7 +292,7 @@ class Orphe {
      * 歩容解析のデータを保存しておく連想配列です。
      * @property {Object} gait - 歩容解析のデータ
      * @property {number} gait.type - 歩容のタイプ（0: 通常歩行, 1: 走行, 2: ランニング）
-     * @property {number} gait.direction - 歩容の向き（0: 前進, 1: 後退, 2: 左, 3: 右）
+     * @property {number} gait.direction - 歩容の向き（0: なし, 1: 前, 2: 後, 3: 内側, 4: 外側。3/4 の左右は LR 設定で入れ替わる）
      * @property {number} gait.calorie - 消費カロリー
      * @property {number} gait.distance - 移動距離
      * @property {number} gait.steps - 歩数
@@ -615,7 +627,8 @@ class Orphe {
         if (typeof BleSharedBridge !== 'undefined' && options.useSharedBridge !== false && result) {
           this._bridge = new BleSharedBridge(this.id);
           this._isBridgeSecondary = false;
-          this._bridge.claimPrimary();
+          // device_information（lr など）も Secondary タブへ共有する
+          this._bridge.claimPrimary({ getDeviceInformation: () => this.device_information });
 
           // Primary の BLE が予期せず切断された場合、他タブへ通知する
           if (this.bluetoothDevice && !this._bridgeBleDisconnectHooked) {
@@ -899,13 +912,13 @@ class Orphe {
    */
   requestDevice(uuid, connectionOptions = {}) {
     let requestOptions = {
-      /*
-      ORPHE core module name: CR-2, CR-3
-      service UUIDを ORPHE_OTHER_SERVICE に指定することで，ORPHE core moduleのみを検出することができます．さらに，namePrefixを指定することで，CR-2, CR-3のみを検出することができます．
-      */
+      // Filters are OR alternatives. Allow the CR- name when firmware does not
+      // advertise the information-service UUID. Keep service-based
+      // discovery for renamed devices, and allow the name on its own as well.
       filters: [
-        { services: [this.ORPHE_INFORMATION] }
-        // { namePrefix: ['CR-'] }
+        { services: [this.ORPHE_INFORMATION] },
+        { services: [this.ORPHE_OTHER_SERVICE] },
+        { namePrefix: 'CR-' }
       ],
       acceptAllDevices: false,
       optionalServices: [
@@ -1316,6 +1329,9 @@ class Orphe {
       callbacks[name] = (d) => this[name](d);
     }
     callbacks.onPrimaryLost = () => this._handlePrimaryLost(str_type);
+    // Secondary は BLE を持たないので、device_information は Primary から受け取る
+    // （gait.direction の 3/4 を左右に変換するには device_information.lr が必要）
+    callbacks.onDeviceInformation = (info) => { this.device_information = info; };
 
     bridge.subscribeAsSecondary(callbacks);
     this.onConnect('BRIDGE_SECONDARY');
@@ -1451,7 +1467,7 @@ class Orphe {
       // データ欠損チェック
       if (uuid == 'SENSOR_VALUES') {
         // 魔改造200Hzの場合はヘッダが50
-        if (data.getUint8(0) == 50) {
+        if (data.byteLength > 0 && data.getUint8(0) == 50 && orpheCoreIsSupportedHeader50Packet(data)) {
           // データ欠損チェック（uint16 wraparound / serial 0 対応）。欠損時は lostData() を呼ぶ
           this._checkSerialGap(data.getUint16(1));
         }
@@ -1643,20 +1659,17 @@ class Orphe {
       }
     }
     else if (uuid == 'SENSOR_VALUES') {
-
+      if (data.byteLength === 0) return;
 
       // 魔改造200Hzの場合はヘッダが50
       if (data.getUint8(0) == 50) {
 
-        // データ欠損チェック（uint16 wraparound / serial 0 対応）
-        this._checkSerialGap(data.getUint16(1));
-
-        // エラー処理
-        if (data.byteLength != 92) {
-          console.warn("SENSOR VALUES: Data length is not 92");
+        // Validate before reading the serial number or updating the gap tracker.
+        if (!orpheCoreIsSupportedHeader50Packet(data)) {
+          console.warn(`SENSOR VALUES: Unsupported header 50 packet (${data.byteLength} bytes; expected 92 or zero-padded 104)`);
           return
         }
-
+        this._checkSerialGap(data.getUint16(1));
 
         // COREから送られてきたタイムスタンプをUNIXタイムスタンプに変換
         function toTimestamp(hours, minutes, seconds, milliseconds) {
@@ -1998,7 +2011,7 @@ class Orphe {
   gotType(type) { }
   /**
    * ランニングの方向を取得する
-   * @param {Object} direction {value} 0:none, 1:foward, 2:backward, 3:inside, 4:outside
+   * @param {Object} direction {value} 0:none, 1:forward, 2:backward, 3:inside, 4:outside
    */
   gotDirection(direction) { }
   /**
